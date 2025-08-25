@@ -210,6 +210,17 @@ impl TextMetricFactory {
                 "buttery-smooth",
                 "biggest competitor",
                 "it lets you",
+                "sass",
+                "platform",
+                "comprehensive analytics",
+                "user management",
+                "API access",
+                "feature-rich",
+                "provides customized",
+                "maintaining simplicity",
+                "technology stack",
+                "enterprise",
+                "-grade",
             ])?,
             negative_buzzword_ahocorasick: AhoCorasick::new(["modern english", "made the app"])?,
             mr_fancy_pants_ahocorasick: AhoCorasick::new(["(e.g.", "(formerly"])?,
@@ -320,6 +331,7 @@ impl TextMetricFactory {
                 "drowning in",
                 "last week",
                 "next week",
+                "P.S", // what the helly, this ain't second grade
             ])?,
         })
     }
@@ -361,7 +373,7 @@ impl TextMetricFactory {
                 )
             })
             .count()
-            + text.matches('•').count(); // Lists are OK, this shit is not
+            + text.matches(['•', '●']).count(); // Lists are OK, this shit is not
 
         let text = text.to_ascii_lowercase().trim().replace("\n\n", "\n");
 
