@@ -2,7 +2,7 @@
 name = "sonai_metrics"
 license = "MIT OR Apache-2.0"
 description = "Text metrics for sonai"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 
 [dependencies]
