@@ -222,7 +222,7 @@ impl TextMetricFactory {
                 "enterprise",
                 "-grade",
             ])?,
-            negative_buzzword_ahocorasick: AhoCorasick::new(["modern english", "made the app"])?,
+            negative_buzzword_ahocorasick: AhoCorasick::new(["modern english", "made the app", "my idea"])?,
             mr_fancy_pants_ahocorasick: AhoCorasick::new(["(e.g.", "(formerly"])?,
             not_just_ahocorasick: AhoCorasick::new([
                 "more than just",
@@ -451,8 +451,8 @@ impl TextMetricFactory {
 
         let dev_log = self.devlog_ahocorasick.find_iter(&text).count();
 
-        let buzzwords = self.buzzword_ahocorasick.find_iter(&text).count()
-            - self.negative_buzzword_ahocorasick.find_iter(&text).count();
+        let buzzwords = self.buzzword_ahocorasick.find_iter(&text).count().saturating_sub(
+            self.negative_buzzword_ahocorasick.find_iter(&text).count());
 
         let not_just = self.not_just_ahocorasick.find_iter(&text).count();
 

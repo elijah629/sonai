@@ -15,9 +15,9 @@ use rand_xoshiro::rand_core::SeedableRng;
 use time::{OffsetDateTime, format_description};
 use tokio::fs;
 
-mod summer_of_making;
+mod flavortown;
 
-use crate::summer_of_making::fetch_all;
+use crate::flavortown::fetch_all;
 use sonai_metrics::{DIST_FN, DistanceFunction, features_from_metrics};
 use sonai_metrics::{TextMetricFactory, TextMetrics};
 
@@ -27,19 +27,30 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Fetching projects + devlogs");
 
-    let data: Vec<String> = if fs::try_exists("som.data").await? {
-        let data = fs::read("som.data").await?;
+    let mut data: Vec<String> = if fs::try_exists("ftwn.data").await? {
+        let data = fs::read("ftwn.data").await?;
         let result: Vec<String> = decode_from_slice(&data, config)?.0;
 
         result
     } else {
         let env_map = dotenvy::EnvLoader::new().load()?;
-        let logs = fetch_all(&env_map.var("JOURNEY")?).await?;
+        let logs = fetch_all(&env_map.var("FLAVORTOWN_API_KEY")?).await?;
 
-        fs::write("som.data", encode_to_vec(&logs, config)?).await?;
+        fs::write("ftwn.data", encode_to_vec(&logs, config)?).await?;
 
         logs
     };
+
+    let som_data: Vec<String> = if fs::try_exists("som.data").await? {
+        let data = fs::read("som.data").await?;
+        let result: Vec<String> = decode_from_slice(&data, config)?.0;
+
+        result
+    } else {
+        vec![]
+    };
+
+    data.extend(som_data.into_iter());
 
     println!("Calculating metrics");
     let metrics: Vec<TextMetrics> = TextMetricFactory::new()?.calculate_iter(&data).collect();
@@ -49,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
     println!("Building dataset");
     let dataset = Dataset::new(features.clone(), Array2::<f32>::zeros((metrics.len(), 0)));
 
-    let rng = Xoshiro256PlusPlus::seed_from_u64(69420);
+    let rng = Xoshiro256PlusPlus::seed_from_u64(0x7F3A_9C1D_4B2E_6F80);
 
     println!("Training");
     let model: KMeans<f64, DistanceFunction> = KMeans::params_with(2, rng, DIST_FN)
@@ -138,7 +149,7 @@ async fn main() -> anyhow::Result<()> {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>How much of SoM is AI?</title>
+    <title>How much of Flavortown is AI?</title>
   </head>
   <body
     class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100 antialiased">
@@ -146,7 +157,7 @@ async fn main() -> anyhow::Result<()> {
       <div class="max-w-5xl mx-auto py-6 px-5 flex items-center justify-between">
         <h1 class="text-3xl font-semibold">sonai Detector Demo</h1>
         <a
-          href="https://github.com/elijah629/how-much-of-som-is-ai"
+          href="https://github.com/elijah629/sonai"
           target="_blank"
           class="text-blue-600 underline hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
           >Source</a
