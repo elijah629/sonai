@@ -5,8 +5,9 @@ use bincode::config::standard;
 use bincode::serde::{decode_from_slice, encode_to_vec};
 use colored::Colorize;
 use linfa::Dataset;
-use linfa::traits::{Fit, Predict};
+use linfa::traits::{Fit, Predict, Transformer};
 use linfa_clustering::KMeans;
+use linfa_preprocessing::linear_scaling::LinearScaler;
 use ndarray::{Array1, Array2};
 use num_format::{Locale, ToFormattedString};
 use rand::seq::IndexedRandom;
@@ -16,6 +17,7 @@ use time::{OffsetDateTime, format_description};
 use tokio::fs;
 
 mod flavortown;
+mod network;
 
 use crate::flavortown::fetch_all;
 use sonai_metrics::{DIST_FN, DistanceFunction, features_from_metrics};
@@ -27,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Fetching projects + devlogs");
 
-    let mut data: Vec<String> = if fs::try_exists("ftwn.data").await? {
+    let ftwn_data: Vec<String> = if fs::try_exists("ftwn.data").await? {
         let data = fs::read("ftwn.data").await?;
         let result: Vec<String> = decode_from_slice(&data, config)?.0;
 
@@ -50,6 +52,7 @@ async fn main() -> anyhow::Result<()> {
         vec![]
     };
 
+    let mut data = ftwn_data.clone();
     data.extend(som_data.into_iter());
 
     println!("Calculating metrics");
@@ -60,18 +63,31 @@ async fn main() -> anyhow::Result<()> {
     println!("Building dataset");
     let dataset = Dataset::new(features.clone(), Array2::<f32>::zeros((metrics.len(), 0)));
 
-    let rng = Xoshiro256PlusPlus::seed_from_u64(0x7F3A_9C1D_4B2E_6F80);
+    let scaler = LinearScaler::standard().fit(&dataset)?;
 
-    println!("Training");
+    let dataset = scaler.transform(dataset);
+
+    let rng = Xoshiro256PlusPlus::seed_from_u64(0xAB17349264ABCABA);
+
     let model: KMeans<f64, DistanceFunction> = KMeans::params_with(2, rng, DIST_FN)
         .max_n_iterations(1000)
         .n_runs(10)
         .fit(&dataset)?;
 
+    fs::write("../sonai/model.scaler", encode_to_vec(&scaler, config)?).await?;
     fs::write("../sonai/model.kmeans", encode_to_vec(&model, config)?).await?;
 
     println!("Predicting");
-    let predicted: Array1<usize> = model.predict(&features);
+    let predicted: Array1<usize> = {
+        let metrics: Vec<TextMetrics> = TextMetricFactory::new()?
+            .calculate_iter(&ftwn_data)
+            .collect();
+        let metrics_refs: Vec<&TextMetrics> = metrics.iter().collect();
+        let features = features_from_metrics(&metrics_refs);
+        let features = scaler.transform(features);
+
+        model.predict(&features)
+    };
 
     let (emoji_sums, counts) = metrics.iter().zip(predicted.iter()).fold(
         ([0.0f64; 2], [0usize; 2]),
@@ -92,7 +108,7 @@ async fn main() -> anyhow::Result<()> {
 
     fs::write("../sonai/model.ai.cluster", [ai_label as u8]).await?;
 
-    let cluster_counts: [usize; 2] = predicted.iter().fold([0, 0], |mut counts, &label| {
+    let cluster_counts = predicted.iter().fold([0; 2], |mut counts, &label| {
         counts[label] += 1;
         counts
     });
@@ -112,9 +128,12 @@ async fn main() -> anyhow::Result<()> {
     for (label, items) in clusters {
         println!(
             "\n{}",
-            format!("==================== Cluster {label} ====================")
-                .bold()
-                .cyan()
+            format!(
+                "==================== {} Cluster ====================",
+                if label == ai_label { "AI" } else { "Human" }
+            )
+            .bold()
+            .cyan()
         );
 
         let sample = items.choose_multiple(&mut rng, 5);

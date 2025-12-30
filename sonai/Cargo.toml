@@ -9,6 +9,7 @@ description = "Generic AI Text Detection for rust"
 # Actual inference
 linfa = { workspace = true }
 linfa-clustering = { workspace = true }
+linfa-preprocessing = { workspace = true }
 linfa-nn = { workspace = true }
 ndarray = { workspace = true }
 

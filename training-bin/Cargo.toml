@@ -8,6 +8,7 @@ edition = "2024"
 sonai_metrics = { workspace = true }
 
 linfa = { workspace = true }
+linfa-preprocessing = { workspace = true }
 linfa-clustering = { workspace = true }
 linfa-nn = { workspace = true }
 ndarray = { workspace = true }
@@ -31,3 +32,4 @@ futures = "0.3.31"
 rand_xoshiro = "0.6.0"
 time = { version = "0.3.41", features = ["formatting"] }
 num-format = "0.4.4"
+httpdate = "1.0.3"

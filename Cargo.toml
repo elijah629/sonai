@@ -9,6 +9,7 @@ members = [
 [workspace.dependencies]
 linfa = { version = "0.8.1", default-features = false }
 linfa-clustering = { version = "0.8.1", features = ["serde"] }
+linfa-preprocessing = { version = "0.8", features = ["serde"] }
 linfa-nn = "0.8.1"
 ndarray = { version = "0.16.1", default-features = false }
 

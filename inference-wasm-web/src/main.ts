@@ -6,7 +6,9 @@ const $output = document.getElementById("output") as HTMLPreElement;
 
 $input.addEventListener("input", () => {
   const input = $input.value;
+  const start = performance.now();
   const { chance_ai, chance_human, metrics } = predict(input);
+  const time = performance.now() - start;
 
   $output.innerText = `Text is most likely ${chance_ai >= chance_human ? "AI" : "Human"}
 
@@ -15,7 +17,9 @@ Chance:
   Human = ${chance_human.toFixed(2)}%
 
 Non-zero metrics:
-${display(metrics)}`;
+${display(metrics)}
+
+Time: ${time}ms`;
 });
 
 function display(metrics: Record<string, number>): string {
@@ -25,7 +29,7 @@ function display(metrics: Record<string, number>): string {
     .map(([key, value]) =>
       Number.isInteger(value)
         ? `  ${key}: ${value}`
-        : `  ${key}: ${value.toFixed(2)}`
+        : `  ${key}: ${value.toFixed(2)}`,
     );
 
   return output.join("\n");
